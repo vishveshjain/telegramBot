@@ -2,9 +2,17 @@ import telebot
 import requests
 import urllib.parse
 import os
+import random
+import time
+import threading
+from telebot import types
+import urllib.parse
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+#token
 Token = "6691503234:AAFXchKpFJovhs56gu5gb_tv-ldqjkSY-kY"
 bot = telebot.TeleBot(Token)
+
 country_code_to_name = {
   "AF": "Afghanistan",
   "AX": "Åland Islands",
@@ -250,40 +258,175 @@ country_code_to_name = {
   "ZM": "Zambia",
   "ZW": "Zimbabwe"
 }
-@bot.message_handler(commands=['start','demo', 'begin'])
-def start(message):
-    bot.reply_to(message, "This bot provides lots of interesting services. Please hit /help to find all of our services")
 
+# Dictionary containing command descriptions
+command_descriptions = {
+    "start": "Greeting",
+    "help": "Show command list",
+    "gender": "Determine the gender of a name.",
+    "nationality": "Predict the nationality of a name.",
+    "bored": "Bored is a command to find something to do by getting suggestions for random activities.",
+    "dog": "This command will show you random dog images.",
+    "cat": "Get random cat facts via text message.",
+    "ip": "It allows you to get your current IP address.",
+    "ipcheck": "Get information about a specified IP address, such as geological info, company, and carrier name.",
+    "jokes": "Get random jokes.",
+    "fakeuser": "Get information about a random fake user, including gender, name, email, address, etc.",
+    "countrycode": "Show the list of country code and country name.",
+    "universitylist": "Get a list of universities in a specified country.",
+    "zipcode": "Get information about a specified ZIP/pin code. We have to provide country code and pin/zipcode for this. To check your coutry code click one /countrycode",
+    "rolldice": "Roll a dice",
+    "flipcoin": "Flip a coin.",
+    "stopwatch": "To start and stop stopwatch.",
+    "timer": "Users can start a timer using the timer command, provide a duration in seconds, and the bot will send a message when the timer is up.",
+    "canceltimer": "Users can also cancel an ongoing timer using the /canceltimer command.",
+}
+
+# Create an inline keyboard for the start menu
+start_keyboard = types.InlineKeyboardMarkup(row_width=1)
+start_keyboard.add(types.InlineKeyboardButton("Show Commands", callback_data="show_commands"))
+
+
+# Handle the /start command
+@bot.message_handler(commands=['start', 'begin', 'demo'])
+def start(message):
+    markup = types.ReplyKeyboardMarkup(row_width=2)
+    start_btn = types.KeyboardButton('/start')
+    help_btn = types.KeyboardButton('/help')
+    markup.add(start_btn, help_btn)
+    bot.reply_to(message, "Welcome to the bot! Use the buttons below to explore:", reply_markup=markup)
+
+# Handle the /help command
 @bot.message_handler(commands=['help'])
 def help(message):
-    help_text = """Commands:
-/start - Greeting
-/help - Show command list
-/gender - Determine the gender of a name. Please provide a name after the command, like: /gender John
-/nationality - Predict the nationality of a name. Please provide a name after the command, like: /nationality John
-/bored - Bored is a command to find something to do by getting suggestions for random activities.
-/dog - This command will show you random dog images.
-/cat - Get random cat facts via text message.
-/ip - It allows you to get your current IP address.
-/ipcheck - Get information about a specified IP address, such as geological info, company, and carrier name.. Please provide IP after the command, like: /ipcheck 146.125.65.147
-/jokes - Get random jokes.
-/fakeuser - Get information about a random fake user, including gender, name, email, address, etc.
-/countrycode - Show the list of country code and country name.
-/universitylist - Get a list of universities in a specified country. Please provide a country after the command, like: /universitylist india
-/zipcode - Get information about a specified ZIP code. For example if we are living in us and zip code is 90210, we can use command /zipcode US 90210.
-           Here we have to use country code for country. To know your country code click /countrycode.
-           Other example, if you are living in india and your postal code is 110006, then we can use command /zipcode IN 110006.
-"""
-    bot.reply_to(message, help_text)
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    command_descriptions = {
+        "gender": "Determine the gender of a name.",
+        "nationality": "Predict the nationality of a name.",
+        "bored": "Get suggestions for random activities.",
+        "dog": "View random dog images.",
+        "cat": "Receive random cat facts.",
+        "ip": "Get your current IP address.",
+        "ipcheck": "Get information about a specified IP address.",
+        "jokes": "Get random jokes.",
+        "fakeuser": "Generate information about a random fake user.",
+        "countrycode": "Show the list of country codes and names.",
+        "universitylist": "Get a list of universities in a specified country.",
+        "zipcode": "Get information about a specified ZIP code.",
+        "rolldice": "Roll a dice.",
+        "flipcoin": "Flip a coin.",
+        "stopwatch": "Start and stop stopwatch.",
+        "timer": "Start a timer.",
+        "canceltimer": "Cancel an ongoing timer."
+    }
+    
+    for command, description in command_descriptions.items():
+        markup.add(types.InlineKeyboardButton(description, callback_data=f"{command}"))
+    
+    markup.add(types.InlineKeyboardButton("Show Commands", callback_data="show_commands"))
+    
+    bot.reply_to(message, "Here are the available commands:", reply_markup=markup)
+
+# ... (rest of your code)
+
+
+# Handle inline keyboard button callbacks
+@bot.callback_query_handler(func=lambda call: True)
+def callback_inline(call):
+    command = call.data
+    
+    if command == "show_commands":
+        # Create an inline keyboard for command buttons
+        command_keyboard = types.InlineKeyboardMarkup(row_width=2)
+        
+        # Add buttons for each command with descriptions
+        for cmd, description in command_descriptions.items():
+            button = types.InlineKeyboardButton(f"/{cmd}", callback_data=f"command_{cmd}")
+            command_keyboard.add(button)
+        
+        bot.edit_message_text("Here are the available commands:", call.message.chat.id, call.message.message_id, reply_markup=command_keyboard)
+    
+    elif command.startswith("command_"):
+        cmd = command.split("command_")[-1]
+        description = command_descriptions.get(cmd, "No description available.")
+        bot.edit_message_text(f"**/{cmd} Command:**\n\n{description}", call.message.chat.id, call.message.message_id)
+
+    else:
+        if command == "gender":
+            gender(call.message)
+        elif command == "nationality":
+            nationality(call.message)
+        elif command == "bored":
+            bored(call.message)
+        elif command == "dog":
+            dog(call.message)
+        elif command == "cat":
+            cat(call.message)  
+        elif command == "ip":
+            ip(call.message)  
+        elif command == "ipcheck":
+            ipcheck(call.message) 
+        elif command == "jokes":
+            jokes(call.message)  
+        elif command == "fakeuser":
+            fakeuser(call.message)
+        elif command == "countrycode":
+            countrycode(call.message)
+        elif command == "universitylist":
+            universitylist(call.message)
+        elif command == "zipcode":
+            zipcode(call.message)
+        elif command == "rolldice":
+            rolldice(call.message)
+        elif command == "flipcoin":
+            flipcoin(call.message)
+        elif command == "stopwatch":
+            stopwatch(call.message)
+        elif command == "timer":
+            timer(call.message)
+        elif command == "canceltimer":
+            canceltimer(call.message)
+        else:
+            bot.reply_to(call.message, "Unknown command or button.")
+
+
+# @bot.message_handler(commands=['help'])
+# def help(message):
+#     help_text = """Commands:
+# /start - Greeting
+# /help - Show command list
+# /gender - Determine the gender of a name. Please provide a name after the command, like: /gender John
+# /nationality - Predict the nationality of a name. Please provide a name after the command, like: /nationality John
+# /bored - Bored is a command to find something to do by getting suggestions for random activities.
+# /dog - This command will show you random dog images.
+# /cat - Get random cat facts via text message.
+# /ip - It allows you to get your current IP address.
+# /ipcheck - Get information about a specified IP address, such as geological info, company, and carrier name.. Please provide IP after the command, like: /ipcheck 146.125.65.147
+# /jokes - Get random jokes.
+# /fakeuser - Get information about a random fake user, including gender, name, email, address, etc.
+# /countrycode - Show the list of country code and country name.
+# /universitylist - Get a list of universities in a specified country. Please provide a country after the command, like: /universitylist india
+# /zipcode - Get information about a specified ZIP code. For example if we are living in us and zip code is 90210, we can use command /zipcode US 90210.
+#            Here we have to use country code for country. To know your country code click /countrycode.
+#            Other example, if you are living in india and your postal code is 110006, then we can use command /zipcode IN 110006.
+# /rolldice - To roll a dice
+# /flipcoin - To flip a coin.  
+# /timer - Users can start a timer using the timer command, provide a duration in seconds, and the bot will send a message when the timer is up.      
+# /canceltimer - Users can also cancel an ongoing timer using the /canceltimer command.   
+# """
+#     bot.reply_to(message, help_text)
 
 @bot.message_handler(commands=['gender'])
 def gender(message):
-    # Get the user's input after the command
-    name = message.text.split("/gender")[-1].strip()
-    if not name:
-        bot.reply_to(message, "Please provide a name after the command, like: /gender John")
-        return
+    # Send a message to get the user's input
+    bot.reply_to(message, "Please provide a name to determine its likely gender:")
+    
+    # Define a state to keep track of the conversation state
+    bot.register_next_step_handler(message, process_gender_input)
 
+def process_gender_input(message):
+    name = message.text.strip()
+    
     response = requests.get(f"https://api.genderize.io?name={name}")
 
     if response.status_code == 200:
@@ -294,17 +437,21 @@ def gender(message):
             bot.reply_to(message, f"Cannot determine the gender for the name '{name}'")
     else:
         bot.reply_to(message, "Failed to fetch name data.")
-    bot.reply_to(message, "/help")
+        
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['nationality'])
 def nationality(message):
-    # Get the user's input after the command
-    name = message.text.split("/nationality")[-1].strip()
+    # Send a message to get the user's input
+    bot.reply_to(message, "Please provide a name to determine its nationality:")
     
-    if not name:
-        bot.reply_to(message, "Please provide a name after the command, like: /nationality John")
-        return
+    # Define a state to keep track of the conversation state
+    bot.register_next_step_handler(message, process_nationality_input)
 
+def process_nationality_input(message):
+    name = message.text.strip()
+    
     response = requests.get(f"https://api.nationalize.io/?name={name}")
     
     if response.status_code == 200:
@@ -313,12 +460,15 @@ def nationality(message):
             top_country = data['country'][0]
             country_id = top_country['country_id']
             probability = top_country['probability']
+            
             bot.reply_to(message, f"The name '{name}' is most likely from {country_code_to_name[country_id]} with a probability of {probability}")
         else:
             bot.reply_to(message, f"Cannot determine the nationality for the name '{name}'")
     else:
         bot.reply_to(message, "Failed to fetch nationality.")
-    bot.reply_to(message, "/help")
+        
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['bored'])
 def bored(message):
@@ -328,10 +478,11 @@ def bored(message):
         bot.reply_to(message, f"You can do '{data['activity']}' activity, it is '{data['type']}' type activity. This activity will require '{data['participants']}' participants.")
     else:
         bot.reply_to(message, "Failed to load actitivies.")
-    bot.reply_to(message, "/help")
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['dog'])
-def quotes(message):
+def dog(message):
     response = requests.get("https://dog.ceo/api/breeds/image/random")
     if response.status_code == 200:
         data = response.json()
@@ -340,7 +491,8 @@ def quotes(message):
         bot.send_photo(message.chat.id, photo=image_content)
     else:
         bot.reply_to(message, "Failed to dog image.")
-    bot.reply_to(message, "/help")
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['cat'])
 def cat(message):
@@ -351,7 +503,8 @@ def cat(message):
         bot.reply_to(message, fact)
     else:
         bot.reply_to(message, f"Unable to fatch cat fact")
-    bot.reply_to(message, "/help")
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['ip'])
 def ip(message):
@@ -362,12 +515,19 @@ def ip(message):
         bot.reply_to(message, f"Your ip address is: "+ip)
     else:
         bot.reply_to(message, f"Unable to fatch IP address")
-    bot.reply_to(message, "/help")
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['ipcheck'])
-def ip_check(message):
-    # Get the user's input after the command
-    ip = message.text.split("/ipcheck")[-1].strip()
+def ipcheck(message):
+    # Send a message to get the user's input
+    bot.reply_to(message, "Please provide an IP address to check:")
+
+    # Define a state to keep track of the conversation state
+    bot.register_next_step_handler(message, process_ipcheck_input)
+
+def process_ipcheck_input(message):
+    ip = message.text.strip()
     
     # Check if the message is from the bot itself
     if message.from_user.id == bot.get_me().id:
@@ -385,7 +545,9 @@ def ip_check(message):
         bot.reply_to(message, reply_text)
     else:
         bot.reply_to(message, "Unable to fetch IP address information.")
-    bot.reply_to(message, "/help")
+
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['jokes'])
 def jokes(message):
@@ -398,7 +560,8 @@ def jokes(message):
         bot.reply_to(message, f"This is a {type1} joke.\n{setup} \n   {punchline} 😂😂")
     else:
         bot.reply_to(message, "Failed to dog image.")
-    bot.reply_to(message, "/help")
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['fakeuser'])
 def fakeuser(message):
@@ -440,21 +603,29 @@ def fakeuser(message):
         bot.send_photo(message.chat.id, photo=picture, caption=formatted_data)
     else:
         bot.reply_to(message, "Failed to fetch fake user data.")
-    bot.reply_to(message, "/help")
-
-import urllib.parse
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['universitylist'])
 def universitylist(message):
-    # Get the user's input after the command
-    country = message.text.split("/universitylist")[-1].strip()
+    # Send a message to get the user's input
+    bot.reply_to(message, "Please provide a country for university list:")
+
+    # Define a state to keep track of the conversation state
+    bot.register_next_step_handler(message, process_country_input)
+
+def process_country_input(message):
+    country = message.text.strip()
     encoded_country = urllib.parse.quote(country)  # Encode the country parameter
     
     response = requests.get(f"http://universities.hipolabs.com/search?country={encoded_country}")
     if response.status_code == 200:
         data = response.json()
         
-        # Create a formatted list with all university details
+        if not data:
+            bot.reply_to(message, f"No universities found for {country}.")
+            return
+        
         formatted_list = ""
         for university in data:
             name = university["name"]
@@ -465,34 +636,41 @@ def universitylist(message):
             
             formatted_list += f"University: {name}\nCountry: {country}\nState: {state}\nDomains: {domains}\nWeb Pages: {web_pages}\n\n"
         
-        # Write the formatted list to a text file
         file_name = f"{country}_universities.txt"
         with open(file_name, "w") as file:
             file.write(formatted_list)
         
-        # Send the text file as a document to the user
         with open(file_name, "rb") as file:
             bot.send_document(message.chat.id, file)
         
-        # Delete the text file after sending
         os.remove(file_name)
     else:
         bot.reply_to(message, "Failed to fetch university list.")
-    bot.reply_to(message, "/help")
+        
+    time.sleep(25)
+    help(message)
+
 
 @bot.message_handler(commands=['countrycode'])
 def countrycode(message):
     country_codes_list = "\n".join([f"{code}: {name}" for code, name in country_code_to_name.items()])
     bot.reply_to(message, "Here are the country codes and names:\n" + country_codes_list)
-    bot.reply_to(message, "/help")
+    time.sleep(25)
+    help(message)
 
 @bot.message_handler(commands=['zipcode'])
 def zipcode(message):
-    # Get the user's input after the command
-    args = message.text.split("/zipcode")[-1].strip().split()
-    
+    # Send a message to get the user's input
+    bot.reply_to(message, "Please provide a country code and a postal code like: IN 110006")
+
+    # Define a state to keep track of the conversation state
+    bot.register_next_step_handler(message, process_zipcode_input)
+
+def process_zipcode_input(message):
+    args = message.text.strip().split()
+
     if len(args) != 2:
-        bot.reply_to(message, "Please provide a country code and a postal code after the command, like: /zipcode IN 110006")
+        bot.reply_to(message, "Please provide a country code and a postal code after the command, like: IN 110006")
         return
     
     country_code = args[0]
@@ -518,7 +696,102 @@ def zipcode(message):
         bot.reply_to(message, info)
     else:
         bot.reply_to(message, "Failed to fetch postal code information.")
-    bot.reply_to(message, "/help")
+        
+    time.sleep(25)
+    help(message)
 
+@bot.message_handler(commands=['rolldice'])
+def rolldice(message):
+    try:
+        roll_result = random.randint(1, 6)
+        bot.reply_to(message, f"You rolled a {roll_result} on a 6-sided dice.")
+    except Exception as e:
+        bot.reply_to(message, f"An error occurred: {str(e)}")
+
+    time.sleep(25)
+    help(message)
+
+@bot.message_handler(commands=['flipcoin'])
+def flipcoin(message):
+    try:
+        coin_result = random.choice(["Heads", "Tails"])
+        bot.reply_to(message, f"The coin landed on: {coin_result}")
+    except Exception as e:
+        bot.reply_to(message, f"An error occurred: {str(e)}")
+    time.sleep(25)
+    help(message)
+
+stopwatch_data = {}
+
+@bot.message_handler(commands=['stopwatch'])
+def stopwatch(message):
+    chat_id = message.chat.id
+    if chat_id not in stopwatch_data:
+        stopwatch_data[chat_id] = {"running": True, "start_time": time.time()}
+        bot.reply_to(message, "Stopwatch started. Use /stopwatch again to stop.")
+    else:
+        if stopwatch_data[chat_id]["running"]:
+            elapsed_time = time.time() - stopwatch_data[chat_id]["start_time"]
+            formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+            bot.reply_to(message, f"Stopwatch stopped. Time: {formatted_time}")
+        else:
+            bot.reply_to(message, "Stopwatch is not running. Use /stopwatch again to start.")
+
+        stopwatch_data[chat_id]["running"] = not stopwatch_data[chat_id]["running"]
+
+    time.sleep(25)
+    help(message)
+
+
+timer_data = {}
+
+def timer_callback(chat_id):
+    bot.send_message(chat_id, "Timer is up!")
+
+@bot.message_handler(commands=['timer'])
+def timer(message):
+    chat_id = message.chat.id
+
+    if chat_id in timer_data and timer_data[chat_id]["running"]:
+        bot.reply_to(message, "A timer is already running. Use /canceltimer to cancel it.")
+        return
+
+    bot.reply_to(message, "Enter the timer duration in seconds:")
+    timer_data[chat_id] = {"running": True, "timer_thread": None}
+
+@bot.message_handler(func=lambda message: message.text.isdigit() and int(message.text) > 0)
+def timer_duration(message):
+    chat_id = message.chat.id
+    duration = int(message.text)
+
+    if chat_id in timer_data and timer_data[chat_id]["running"]:
+        if timer_data[chat_id]["timer_thread"]:
+            timer_data[chat_id]["timer_thread"].cancel()
+
+        timer_data[chat_id]["timer_thread"] = threading.Timer(duration, timer_callback, args=[chat_id])
+        timer_data[chat_id]["timer_thread"].start()
+
+        bot.reply_to(message, f"Timer set for {duration} seconds. Use /canceltimer to cancel it.")
+    else:
+        bot.reply_to(message, "Timer was not started. Use /timer to start a new timer.")
+
+@bot.message_handler(commands=['canceltimer'])
+def canceltimer(message):
+    chat_id = message.chat.id
+
+    if chat_id in timer_data and timer_data[chat_id]["running"] and timer_data[chat_id]["timer_thread"]:
+        timer_data[chat_id]["timer_thread"].cancel()
+        timer_data[chat_id]["timer_thread"] = None
+        timer_data[chat_id]["running"] = False
+        bot.reply_to(message, "Timer has been canceled.")
+    else:
+        bot.reply_to(message, "No active timer to cancel.")
+
+    time.sleep(25)
+    help(message)
+
+# Run the bot
 bot.polling()
+
+
 
