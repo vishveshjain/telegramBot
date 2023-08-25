@@ -1,9 +1,10 @@
 import telebot
 import random
 import time
+import config
 
 # Set up the bot
-TOKEN = "6551266015:AAF42H87DRXfMcIMcSDMzb46Y6LstHcUW00"
+TOKEN = config.RPSTOKEN
 bot = telebot.TeleBot(TOKEN)
 
 # Emojis for outcomes

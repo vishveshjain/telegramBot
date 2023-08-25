@@ -1,4 +1,5 @@
 import telebot
+import config
 import requests
 import urllib.parse
 import os
@@ -10,7 +11,7 @@ import urllib.parse
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 #token
-Token = "6691503234:AAFXchKpFJovhs56gu5gb_tv-ldqjkSY-kY"
+Token = config.EverthingToken
 bot = telebot.TeleBot(Token)
 
 country_code_to_name = {

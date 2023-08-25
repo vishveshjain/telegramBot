@@ -1,7 +1,8 @@
 import telebot
 import requests
+import config
 
-Token = "6417123547:AAEeLXeKI1awIQCNHUBQuPKgV2MMulTYz1c"
+Token = config.QuotesToken
 bot = telebot.TeleBot(Token)
 
 @bot.message_handler(commands=['start'])
