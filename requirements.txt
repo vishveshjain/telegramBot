@@ -1,1 +1,1 @@
-$ pip install git+https://github.com/eternnoir/pyTelegramBotAPI.git
+pip install git+https://github.com/eternnoir/pyTelegramBotAPI.git
